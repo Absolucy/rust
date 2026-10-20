@@ -71,8 +71,10 @@ pub mod tests {
     // regparm0: @f8(i32 noundef %_1, i32 noundef %_2, ptr {{.*}} %_3, i32 noundef %_4)
     // regparm1: @f8(i32 inreg noundef %_1, i32 noundef %_2, ptr {{.*}} %_3, i32 noundef %_4)
     // regparm2: @f8(i32 inreg noundef %_1, i32 inreg noundef %_2, ptr {{.*}} %_3, i32 noundef %_4)
+    // S2 needs two registers but only one is left, so like GCC it goes on the stack and
+    // nothing after it gets a register either
     // regparm3: @f8(i32 inreg noundef %_1, i32 inreg noundef %_2, ptr {{.*}} %_3,
-    // regparm3-SAME: i32 inreg noundef %_4)
+    // regparm3-SAME: i32 noundef %_4)
     #[no_mangle]
     pub extern "C" fn f8(_: i32, _: i32, _: S2, _: i32) {}
 

@@ -1335,6 +1335,9 @@ pub fn fn_can_unwind(tcx: TyCtxt<'_>, fn_def_id: Option<DefId>, abi: ExternAbi) 
         | Custom
         | RiscvInterruptM
         | RiscvInterruptS
+        | RegParm1
+        | RegParm2
+        | RegParm3
         | RustInvalid
         | Swift
         | Unadjusted => false,

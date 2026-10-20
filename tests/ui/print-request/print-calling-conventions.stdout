@@ -17,6 +17,9 @@ fastcall-unwind
 gpu-kernel
 msp430-interrupt
 ptx-kernel
+regparm1
+regparm2
+regparm3
 riscv-interrupt-m
 riscv-interrupt-s
 rust-call

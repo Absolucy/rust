@@ -73,6 +73,9 @@ pub fn extern_abi_stability(abi: ExternAbi) -> Result<(), UnstableAbi> {
         | ExternAbi::Stdcall { .. }
         | ExternAbi::Fastcall { .. }
         | ExternAbi::Thiscall { .. }
+        | ExternAbi::RegParm1
+        | ExternAbi::RegParm2
+        | ExternAbi::RegParm3
         | ExternAbi::Aapcs { .. }
         | ExternAbi::Win64 { .. }
         | ExternAbi::SysV64 { .. }

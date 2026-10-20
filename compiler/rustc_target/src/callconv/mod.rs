@@ -666,6 +666,9 @@ impl<'a, Ty> FnAbi<'a, Ty> {
                     ExternAbi::C { .. } | ExternAbi::Cdecl { .. } | ExternAbi::Stdcall { .. } => {
                         (x86::Flavor::General, cx.x86_abi_opt().regparm)
                     }
+                    ExternAbi::RegParm1 => (x86::Flavor::General, Some(1)),
+                    ExternAbi::RegParm2 => (x86::Flavor::General, Some(2)),
+                    ExternAbi::RegParm3 => (x86::Flavor::General, Some(3)),
                     _ => (x86::Flavor::General, None),
                 };
                 let reg_struct_return = cx.x86_abi_opt().reg_struct_return;

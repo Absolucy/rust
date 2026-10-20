@@ -117,6 +117,10 @@ pub enum ExternAbi {
     Vectorcall {
         unwind: bool,
     },
+    /// GCC's `regparm(N)`: cdecl, but the first N integer words go in EAX, EDX, ECX
+    RegParm1,
+    RegParm2,
+    RegParm3,
 
     /* x86_64 */
     SysV64 {
@@ -198,6 +202,9 @@ abi_impls! {
             GpuKernel =><= "gpu-kernel",
             Msp430Interrupt =><= "msp430-interrupt",
             PtxKernel =><= "ptx-kernel",
+            RegParm1 =><= "regparm1",
+            RegParm2 =><= "regparm2",
+            RegParm3 =><= "regparm3",
             RiscvInterruptM =><= "riscv-interrupt-m",
             RiscvInterruptS =><= "riscv-interrupt-s",
             RustCall =><= "rust-call",
@@ -363,6 +370,9 @@ impl ExternAbi {
             | Self::Fastcall { .. }
             | Self::Thiscall { .. }
             | Self::Vectorcall { .. }
+            | Self::RegParm1
+            | Self::RegParm2
+            | Self::RegParm3
             | Self::SysV64 { .. }
             | Self::Win64 { .. }
             | Self::RustPreserveNone

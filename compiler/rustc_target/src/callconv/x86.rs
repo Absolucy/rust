@@ -2,7 +2,7 @@ use rustc_abi::{
     AddressSpace, Align, BackendRepr, Float, HasDataLayout, Primitive, Reg, RegKind, TyAndLayout,
 };
 
-use crate::callconv::{ArgAttribute, FnAbi, PassMode, TyAbiInterface};
+use crate::callconv::{ArgAttribute, ArgAttributes, FnAbi, PassMode, TyAbiInterface, Uniform};
 use crate::spec::{HasTargetSpec, RustcAbi};
 
 #[derive(PartialEq)]
@@ -142,6 +142,7 @@ pub(crate) fn fill_inregs<'a, Ty, C>(
     rust_abi: bool,
 ) where
     Ty: TyAbiInterface<'a, C> + Copy,
+    C: HasDataLayout + HasTargetSpec,
 {
     if opts.flavor != Flavor::FastcallOrVectorcall && opts.regparm.is_none_or(|x| x == 0) {
         return;
@@ -157,6 +158,7 @@ pub(crate) fn fill_inregs<'a, Ty, C>(
 
     // 2 for fastcall/vectorcall, regparm limited by 3 otherwise
     let mut free_regs = opts.regparm.unwrap_or(2).into();
+    let is_regparm = opts.flavor == Flavor::General;
 
     // For types generating PassMode::Cast, InRegs will not be set.
     // Maybe, this is a FIXME
@@ -165,9 +167,42 @@ pub(crate) fn fill_inregs<'a, Ty, C>(
         return;
     }
 
+    // regparm hands the hidden return pointer the first register, see
+    // X86_32ABIInfo::getIndirectReturnResult()
+    if is_regparm && let PassMode::Indirect { ref mut attrs, .. } = fn_abi.ret.mode {
+        attrs.set(ArgAttribute::InReg);
+        free_regs -= 1;
+    }
+
     for arg in fn_abi.args.iter_mut() {
         let attrs = match arg.mode {
-            PassMode::Ignore | PassMode::Indirect { attrs: _, meta_attrs: None, on_stack: _ } => {
+            PassMode::Ignore
+            | PassMode::Indirect { attrs: _, meta_attrs: None, on_stack: false } => {
+                continue;
+            }
+            PassMode::Indirect { attrs: _, meta_attrs: None, on_stack: true } => {
+                // regparm splits small structs across the free registers, see
+                // X86_32ABIInfo::shouldAggregateUseDirect(). Win32 never does this.
+                if !is_regparm
+                    || cx.target_spec().is_like_msvc
+                    || arg.layout.is_single_fp_element(cx)
+                {
+                    continue;
+                }
+                let size_in_regs = arg.layout.size.bits().div_ceil(32);
+                if size_in_regs == 0 {
+                    continue;
+                }
+                if size_in_regs > free_regs {
+                    break;
+                }
+                free_regs -= size_in_regs;
+                let mut attrs = ArgAttributes::new();
+                attrs.set(ArgAttribute::InReg);
+                arg.cast_to_with_attrs(Uniform::new(Reg::i32(), arg.layout.size), attrs);
+                if free_regs == 0 {
+                    break;
+                }
                 continue;
             }
             PassMode::Direct(ref mut attrs) => attrs,
@@ -197,7 +232,9 @@ pub(crate) fn fill_inregs<'a, Ty, C>(
 
         free_regs -= size_in_regs;
 
-        if arg.layout.size.bits() <= 32 && unit.kind == RegKind::Integer {
+        // fastcall only takes 32-bit ints, but regparm puts an i64 in two registers
+        let max_inreg_bits = if is_regparm { 64 } else { 32 };
+        if arg.layout.size.bits() <= max_inreg_bits && unit.kind == RegKind::Integer {
             attrs.set(ArgAttribute::InReg);
         }
 

@@ -178,6 +178,14 @@ impl AbiMap {
             }
             (ExternAbi::Vectorcall { .. }, _) => return AbiMapping::Invalid,
 
+            // regparm is plain C plus `inreg` args, see `adjust_for_foreign_abi`
+            (ExternAbi::RegParm1 | ExternAbi::RegParm2 | ExternAbi::RegParm3, ArchKind::X86) => {
+                CanonAbi::C
+            }
+            (ExternAbi::RegParm1 | ExternAbi::RegParm2 | ExternAbi::RegParm3, _) => {
+                return AbiMapping::Invalid;
+            }
+
             (ExternAbi::SysV64 { .. }, ArchKind::X86_64) => CanonAbi::X86(X86Call::SysV64),
             (ExternAbi::Win64 { .. }, ArchKind::X86_64) => CanonAbi::X86(X86Call::Win64),
             (ExternAbi::SysV64 { .. } | ExternAbi::Win64 { .. }, _) => return AbiMapping::Invalid,
